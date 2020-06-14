@@ -21,12 +21,19 @@ def get_data(con):
 	# get data
 	if con.readable():
 		input_raw = con.readline()
+
 		try:
-			# encoding to utf-8
-			input_enc = input_raw.decode('utf-8')
+			is_atm = 0
+			# encoding bytes to utf-8
+			if b'LPF_DATA' in input_raw:
+				# get atm data
+				input_enc = input_raw[1:].decode('utf-8')
+				is_atm = 1
 
-			# print('src: ', input_enc)
-
+			else:
+				# get beacon data
+				input_enc = input_raw.decode('utf-8')
+			
 			# save to source log file
 			now = time.localtime()
 			timestamp = "%04d-%02d-%02d %02d:%02d:%02d" % (now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
@@ -34,22 +41,25 @@ def get_data(con):
 			with open(SCR_LOG_DIR, 'a', newline='') as f:
 				f.write(log)
 
-			# print('log: ', log)
 			# parsing
 			input_sp = input_enc.split(':')
-			if len(input_sp) == 1:
-				pass # OK_DISC
+
+			if is_atm == 1:
+
+				atm_value = float(input_sp[1].strip(' ').replace('\n', '').replace('\r', ''))
+				return is_atm, atm_value
+
 			else:
 				# 신호 받기
 				input_factory_id = input_sp[1]
 				input_beacon_id = input_sp[2]
 				tx_power = input_sp[3][-2:]
-				rssi = input_sp[5][:4] 
+				rssi = float(input_sp[5][:4])
 
 				# 비콘 신호 선택
 				select_cond = [factory_id == input_factory_id, input_beacon_id[8:] == "DFFB48D2B060D0F5A71096E0"]
 				if all(select_cond):
-					return timestamp, input_factory_id, input_beacon_id, tx_power, rssi
+					return is_atm, timestamp, input_factory_id, input_beacon_id, tx_power, rssi
 					
 		except Exception as e:
 			# print(e)

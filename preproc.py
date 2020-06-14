@@ -1,16 +1,33 @@
 
-import random
+import configparser
 import numpy as np
+import random
+
+CONF_DIR = 'config/'
+CONF_FILENAME = 'config.ini'
+conf = configparser.ConfigParser()
+conf.read(CONF_DIR+CONF_FILENAME)
+
+TX_POWER = int(conf.get('PREPROCESS', 'tx_power'))
+N = int(conf.get('PREPROCESS', 'n'))
 
 def get_distance(tx_power, rssi):
+    rssi = float(rssi)
+    distance = 10**((TX_POWER - rssi) / (10 * N))
+    return distance
 
-	tx_power = -59
-	rssi = float(rssi)
-	n = 2 
-	
-	distance = 10**((tx_power - rssi) / (10*n))
+def trilaterate(x1, x2, x3, y1, y2, y3, r1, r2, r3):
 
-	return distance
+    s = (x3**2 - x2**2 + y3**2 - y2**2 + r2**2 - r3**2)/2
+    t = (x1**2 - x2**2 + y1**2 - y2**2 + r2**2 - r1**2)/2
+
+    y_now = ((t * (x2 - x3)) - (s * (x2 - x1))) / (((y1 - y2) * (x2-x3)) - ((y3-y2) * (x2 -x1)))
+    try:
+      x_now = ((y_now * (y1 - y2)) - t) / (x2 - x1)
+    except:
+      x_now = ((y_now * (y1 - y2)) - t) / .01
+
+    return x_now, y_now
 
 
 class KalmanFilterLinear:
