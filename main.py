@@ -23,6 +23,25 @@ CONF_FILENAME = 'config.ini'
 conf = configparser.ConfigParser()
 conf.read(CONF_DIR + CONF_FILENAME)
 
+port1 = conf.get('CONNECTION', 'PORT1')
+port2 = conf.get('CONNECTION', 'PORT2')
+
+min_diff = float(conf.get('ALERT', 'min_diff'))
+max_diff = float(conf.get('ALERT', 'max_diff'))
+
+############################################################################
+############# 비콘 추가시 수정 필요 부분######################################
+############################################################################
+
+"""
+1 ID
+2 coord
+3 km filter
+4 filter_dict
+5 dist_dict
+6 coord_dict
+7 cal_cond (line 112)
+"""
 b1_id = conf.get('BEACON', 'b1_id')
 b2_id = conf.get('BEACON', 'b2_id')
 b3_id = conf.get('BEACON', 'b3_id')
@@ -73,32 +92,47 @@ coord_dict = {
 }
 
 
+############################################################################
+############# 비콘 추가시 수정 필요 부분######################################
+############################################################################
+
 def main(exec_time):
 
-	con = arduino_connector.get_connection()  # 아두이노 연결
+	print('Start..', min_diff, max_diff)
+	con = arduino_connector.get_connection(port=port1)  # 블루투스 수신 모듈 연결
+	atm_base_con = arduino_connector.get_connection(port=port2) # 기준기압센서 연결
 
 	start = time.time()  # 시작시간
 	el = 0  # 경과 시간
 
 	rciv_idx = 0  # 수신 순번
 	atm_list = list()  # 기압 센서 값
+	atm_base_list = list()  # 기압 센서 베이스 값
 
 	while el < int(exec_time):
 
 		# 거리 계산 조건 업데이트: 해당 수신 순번에 모든 비콘 수신 값과 기압 센서 값이 존재
+		# 비콘 추가 시 아래 리스트에 추가해야함
 		cal_cond = [rciv_idx < len(dist_dict[b1_id]),
 					rciv_idx < len(dist_dict[b2_id]),
 					rciv_idx < len(dist_dict[b3_id]),
 					rciv_idx < len(dist_dict[b4_id]),
-					rciv_idx < len(atm_list)] 
+					# rciv_idx < len(dist_dict[b5_id]),
+					rciv_idx < len(atm_list), 
+					rciv_idx < len(atm_base_list)] 
 
 		result = arduino_parser.get_data(con)  # get data from arduino
+		atm_base = arduino_parser.get_data(atm_base_con)  # get data from base atm
 
-		if result != -1:
-			
+		if ((result != -1) & (atm_base != -1)):
 			print('Recived: ', result)
+			print('BASE: ', atm_base)
 
 			# IF reciver got no error
+			if atm_base[0] == 2:
+				is_atm, atm_base = atm_base
+				atm_base_list.append(atm_base)
+
 			if result[0] == 1:
 				# IF reciver got atm value
 				is_atm, atm_value = result
@@ -124,6 +158,9 @@ def main(exec_time):
 				
 				# Select atm value
 				atm_selected = atm_list[rciv_idx]
+				atm_base_selected = atm_base_list[rciv_idx]
+				atm_diff = abs(atm_selected - atm_base_selected)
+				alert = 1 if min_diff <= atm_diff < max_diff else 0  # 고소 작업 여부
 				
 				# Select nearest 3 beacons
 				now_dist_dict = {b_id: dist_dict[b_id][rciv_idx] for b_id in [b1_id, b2_id, b3_id, b4_id]}
@@ -162,9 +199,11 @@ def main(exec_time):
 		
 				print('-------------------------------')
 				print("Result coord: ", x_now, y_now)
+				print("ATM_DIFF: ", atm_diff, "ALERT: ", alert)
 
-				row = [timestamp, atm_selected, r1, r2, r3, x_now, y_now]
-				header = ['TIME', 'ATM', 'R1', 'R2', 'R3', 'X', 'Y']
+				row = [timestamp, atm_base_selected, atm_selected, atm_diff, r1, r2, r3, x_now, y_now, alert]
+				print(row)
+				header = ['TIME', 'BASE_ATM', 'ATM', 'ATM_DIFF', 'R1', 'R2', 'R3', 'X', 'Y', 'ALERT']
 				arduino_logger.save_csv(PREPROC_LOG_DIR, PREPROC_LOG_FILENAME, header, row)
 				
 				rciv_idx += 1  # 수신 순번 업데이트

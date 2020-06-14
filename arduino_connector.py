@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 # import datetime
 import serial
+import sys
 # import time
 # import configparser
 
-PORT = 'COM11'
 BAUDRATE = 9600
 
-def get_connection(port=PORT, baudrate=BAUDRATE):
+def get_connection(port, baudrate=BAUDRATE):
 	con = serial.Serial(port=port, baudrate=baudrate)
 	return con
 
 if __name__ == '__main__':
+	port_input = sys.argv[1]
 	try:
-		con = get_connection()
+		con = get_connection(port=port_input)
 		print("Connected to arduino")
 	except Exception as e:
 		print('Fail to connection')

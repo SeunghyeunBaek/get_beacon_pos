@@ -29,7 +29,9 @@ def get_data(con):
 				# get atm data
 				input_enc = input_raw[1:].decode('utf-8')
 				is_atm = 1
-
+			elif b'BASE' in input_raw:
+				input_enc = input_raw.decode('utf-8')
+				is_atm = 2
 			else:
 				# get beacon data
 				input_enc = input_raw.decode('utf-8')
@@ -49,6 +51,10 @@ def get_data(con):
 				atm_value = float(input_sp[1].strip(' ').replace('\n', '').replace('\r', ''))
 				return is_atm, atm_value
 
+			elif is_atm == 2:
+				base_atm = float(input_sp[1].strip(' ').replace('\n', '').replace('\r', ''))
+				return is_atm, base_atm
+				
 			else:
 				# 신호 받기
 				input_factory_id = input_sp[1]

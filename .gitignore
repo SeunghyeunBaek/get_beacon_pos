@@ -1,0 +1,6 @@
+beacon_venv/*
+log/*
+stats/*
+__pycache__/*
+.vscode/*
+old/*
