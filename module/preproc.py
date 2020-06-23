@@ -19,14 +19,14 @@ def get_distance(tx_power, rssi):
 # main.py line 161
 def trilaterate(x1, x2, x3, y1, y2, y3, r1, r2, r3):
 
-    s = (x3**2 - x2**2 + y3**2 - y2**2 + r2**2 - r3**2)/2
-    t = (x1**2 - x2**2 + y1**2 - y2**2 + r2**2 - r1**2)/2
+    s = (x2**2 - x1**2 + y2**2 - y1**2 + r1**2 - r2**2)
+    t = (x3**2 - x2**2 + y3**2 - y2**2 + r2**2 - r3**2)
 
-    y_now = ((t * (x2 - x3)) - (s * (x2 - x1))) / (((y1 - y2) * (x2-x3)) - ((y3-y2) * (x2 -x1)))
+    y_now = ((s * (x3 - x2)) - (t * (x2 - x1))) / (2*(((y2 - y1) * (x3 - x2)) - ((y3 - y2) * (x2 - x1))))
     try:
-      x_now = ((y_now * (y1 - y2)) - t) / (x2 - x1)
+      x_now = (s - 2*(y_now * (y2 - y1))) / (2*(x2 - x1))
     except:
-      x_now = ((y_now * (y1 - y2)) - t) / .01
+      x_now = (s - 2*(y_now * (y2 - y1))) / .01
 
     return x_now, y_now
 
